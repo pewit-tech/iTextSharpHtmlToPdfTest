@@ -18,6 +18,25 @@ namespace iTextSharpHtmlToPdfTest
     {
         static void Main(string[] args)
         {
+            var filename = "file.html";
+            var mergePdfFilename = "merge.pdf";
+            var outputFilename = "file.pdf";
+
+            if (args.Length > 0)
+            {
+                filename = args[0];
+            }
+
+            if (args.Length > 1)
+            {
+                mergePdfFilename = args[1];
+            }
+
+            if (args.Length > 2)
+            {
+                outputFilename = args[2];
+            }
+
             // Create a byte array that will eventually hold our final PDF
             Byte[] bytes;
 
@@ -26,21 +45,26 @@ namespace iTextSharpHtmlToPdfTest
             // Create a stream that we can write to, in this case a MemoryStream
             using (var ms = new MemoryStream())
             {
+                PdfReader reader = new PdfReader(mergePdfFilename);
+
                 // Create an iTextSharp Document which is an abstraction of a PDF but **NOT** a PDF
-                using (var doc = new Document())
+                using (var doc = new Document(reader.GetPageSizeWithRotation(1)))
                 {
                     var tagProcessors = (DefaultTagProcessorFactory)Tags.GetHtmlTagProcessorFactory();
                     tagProcessors.RemoveProcessor(HTML.Tag.IMG); // remove the default processor
                     tagProcessors.AddProcessor(HTML.Tag.IMG, new CustomImageTagProcessor()); // use our new processor
-
-
+                    
                     // Create a writer that's bound to our PDF abstraction and our stream
                     using (var writer = PdfWriter.GetInstance(doc, ms))
                     {
                         // Open the document for writing
                         doc.Open();
 
-                        string finalHtml = File.ReadAllText("file.html");
+                        string finalHtml = File.ReadAllText(filename);
+
+                        var page = writer.GetImportedPage(reader, 1);
+
+                        writer.DirectContent.AddTemplate(page, 1f, 0, 0, 1f, 0, 0);
 
                         // Read your html by database or file here and store it into finalHtml e.g. a string
                         // XMLWorker also reads from a TextReader and not directly from a string
@@ -72,7 +96,7 @@ namespace iTextSharpHtmlToPdfTest
                 bytes = ms.ToArray();
             }
 
-            File.WriteAllBytes("file.pdf", bytes);
+            File.WriteAllBytes(outputFilename, bytes);
         }
 
         //this tag processor is required if we will use base64 embedded IMG SRCs
